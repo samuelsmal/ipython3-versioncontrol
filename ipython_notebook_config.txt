@@ -49,10 +49,12 @@ import os
 reload(sys)
 sys.setdefaultencoding('utf8')
 
+
 def get_notebook_data(path_to_file):
     with open(path_to_file, 'r') as notebook:
         notebook_data = json.load(notebook)
     return notebook_data
+
 
 def construct_output_py_file_path(input_file_path, skip_if_exists=True):
     input_headless, ext = os.path.splitext(input_file_path)
@@ -61,6 +63,7 @@ def construct_output_py_file_path(input_file_path, skip_if_exists=True):
     if os.path.exists(output_by_path) and skip_if_exists:
         return
     return output_by_path
+
 
 def write_notebook_data_to_py(notebook_data, out_file_path):
     with open(out_file_path, 'w') as output:
@@ -85,6 +88,18 @@ def write_notebook_data_to_py(notebook_data, out_file_path):
                         output.write(item)
                 output.write('\n')
 
+
+def create_git_commit(os_path):
+    from subprocess import check_call
+    from shlex import split
+
+    workdir, filename = os.path.split(os_path)
+
+    check_call(split('git add {}'.format(filename)), cwd=workdir)
+    check_call(split('git commit -m "notebook save" {}'.format(filename)), cwd=workdir)
+    # check_call(split('git push'), cwd=workdir)
+
+
 def post_save(model, os_path, contents_manager):
     """post-save hook for converting notebooks to .py scripts"""
     if model['type'] != 'notebook':
@@ -96,6 +111,9 @@ def post_save(model, os_path, contents_manager):
     notebook_data = get_notebook_data(os_path)
     write_notebook_data_to_py(notebook_data, output_file_path)
     print output_file_path, "was successfully saved"
+
+    create_git_commit(os_path)
+
 
 c = get_config()
 c.FileContentsManager.post_save_hook = post_save
